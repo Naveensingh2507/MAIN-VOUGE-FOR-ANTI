@@ -1,0 +1,17 @@
+<svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="hsl(55.5, 40%, 15%)" />
+      <stop offset="100%" stop-color="hsl(45.5, 80%, 30%)" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  
+  <!-- Silhouette placeholder -->
+  <circle cx="960" cy="602" r="170" fill="#111" />
+  
+  <!-- Frame text -->
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="120" fill="white" opacity="0.1">
+    FRAME 031
+  </text>
+</svg>

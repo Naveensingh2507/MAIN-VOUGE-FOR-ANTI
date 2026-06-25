@@ -1,0 +1,9 @@
+Screen Recording 2026-06-23 231605.mp4
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+repomix-output.xml
+.netlify/
+.vite/

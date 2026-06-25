@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[dev]
+  command = "npm run vite:dev"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Single-page app: send every route to index.html so React Router
+# (BrowserRouter) can handle paths like /style, /matchability, /profile
+# on direct load or refresh instead of hitting Netlify's 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

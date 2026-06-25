@@ -1,0 +1,241 @@
+import { useEffect, useState } from "react";
+import { X, Sparkles, Scissors, RefreshCw } from "lucide-react";
+import { useAppState, type GarmentCategory } from "@/state/AppState";
+import { processAsset } from "@/utils/apiClient";
+
+const CATEGORIES: GarmentCategory[] = ["Topwear", "Bottomwear", "Footwear", "Outerwear"];
+
+// Premium color spectrum — neutrals, earth tones, jewels, brights.
+const COLOR_GRID = [
+  "#000000", "#1a1a1a", "#3a3a3a", "#5d6050", "#777871", "#c8c7c0", "#ffffff",
+  "#1f2a44", "#0c2340", "#2d4a3e", "#4a7c59", "#87a878", "#cfe1d1", "#e8efe4",
+  "#5b2a86", "#6b2a2a", "#a83b3b", "#e85d3a", "#e8a87c", "#f0d78c", "#f3e9c9",
+  "#3d2914", "#685c53", "#8b6f5e", "#c8a87a", "#d6a374", "#e8e0d4", "#fbf9f6",
+];
+
+export function AssetEditorModal() {
+  const { uiState, setUIState, addGarment, updateGarment, requireAuth } = useAppState();
+  const open = uiState.isEditAssetModalOpen;
+  const pending = uiState.pendingAsset;
+  const isEditing = !!pending?.id;
+
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState<GarmentCategory>("Topwear");
+  const [colorHex, setColorHex] = useState("#1a1a1a");
+  const [removeBg, setRemoveBg] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
+
+  useEffect(() => {
+    if (pending) {
+      setName(pending.name ?? "New Item");
+      setCategory((pending.category as GarmentCategory) ?? "Topwear");
+      setColorHex(pending.colorHex ?? "#1a1a1a");
+      setAnalyzed(!!pending.category);
+    }
+  }, [pending]);
+
+  const runAnalysis = async () => {
+    if (!pending?.imageUrl) return;
+    setAnalyzing(true);
+    try {
+      const result = await processAsset({ image_base64: pending.imageUrl, apply_bg_removal: removeBg });
+      setCategory(result.detected_category || "Topwear");
+      setColorHex(result.detected_color_hex || "#1a1a1a");
+      setAnalyzed(true);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const close = () => setUIState({ isEditAssetModalOpen: false, pendingAsset: null });
+
+  const save = () => {
+    if (!pending) return;
+    if (!requireAuth("Sign in to save this garment to your closet.", "/")) {
+      close();
+      return;
+    }
+    if (isEditing) {
+      updateGarment(pending.id!, {
+        name,
+        category,
+        colorHex,
+        tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
+        imageUrl: pending.imageUrl ?? "",
+      });
+    } else {
+      addGarment({
+        name,
+        category,
+        colorHex,
+        tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
+        imageUrl: pending.imageUrl ?? "",
+      });
+    }
+    close();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in">
+      <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={close} />
+      <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 shadow-ambient animate-slide-up sm:rounded-3xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="label-caps text-primary">{isEditing ? "Garment Details" : "AI Phenotype Extraction"}</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight">
+              {isEditing ? "Edit garment" : "Review attributes"}
+            </h2>
+          </div>
+          <button onClick={close} aria-label="Close"><X className="h-5 w-5 text-on-surface-variant" /></button>
+        </div>
+
+        {pending?.imageUrl && (
+          <div className="relative mb-5">
+            <div
+              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center"
+              style={{ backgroundImage: `url(${pending.imageUrl})`, backgroundColor: removeBg ? "#f0ece4" : undefined }}
+            />
+            {!isEditing && (
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-primary-container/95 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-on-primary-container">
+                <Sparkles className="h-3 w-3" /> AI detected
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* AI background removal toggle */}
+        <div className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-surface-container-low p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Scissors className="h-4 w-4" strokeWidth={1.8} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">AI background removal</p>
+              <p className="text-xs text-on-surface-variant">
+                {isEditing ? "Currently isolated on a clean canvas" : "Isolate the garment on a clean canvas"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={removeBg}
+            onClick={() => setRemoveBg((v) => !v)}
+            className={[
+              "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+              removeBg ? "bg-primary" : "bg-surface-container-high",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                removeBg ? "translate-x-5" : "translate-x-0.5",
+              ].join(" ")}
+            />
+          </button>
+        </div>
+
+        {isEditing ? (
+          <button
+            onClick={runAnalysis}
+            disabled={analyzing}
+            className="mb-5 flex w-full items-center justify-center gap-2 rounded-full border border-primary/30 py-3 text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
+          >
+            {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <Sparkles className="h-4 w-4" strokeWidth={1.5} />}
+            <span className="label-caps">{analyzing ? "Re-analyzing..." : "Re-run AI extraction"}</span>
+          </button>
+        ) : !analyzed ? (
+          <button
+            onClick={runAnalysis}
+            disabled={analyzing}
+            className="mb-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
+          >
+            {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <Sparkles className="h-4 w-4" strokeWidth={1.5} />}
+            <span className="label-caps">{analyzing ? "Extracting..." : "Extract Attributes"}</span>
+          </button>
+        ) : (
+          pending && (
+            <p className="mb-5 text-xs italic text-on-surface-variant">
+              AI detected this as <span className="font-semibold not-italic text-foreground">{category}</span>{" "}
+              in <span className="font-semibold not-italic text-foreground">{colorHex.toUpperCase()}</span>. Override anything below.
+            </p>
+          )
+        )}
+
+        <label className="label-caps mb-2 block text-on-surface-variant">Name</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="mb-5 w-full rounded-full border border-outline-variant bg-background px-5 py-3 text-sm outline-none transition-colors focus:border-foreground"
+        />
+
+        <label className="label-caps mb-2 block text-on-surface-variant">Category</label>
+        <div className="mb-5 flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={[
+                "label-caps rounded-full px-4 py-2 transition-colors",
+                category === c ? "bg-primary text-primary-foreground" : "bg-tertiary-fixed text-on-tertiary-fixed",
+              ].join(" ")}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        <label className="label-caps mb-2 block text-on-surface-variant">Color spectrum</label>
+        <div className="mb-3 grid grid-cols-7 gap-2">
+          {COLOR_GRID.map((hex) => (
+            <button
+              key={hex}
+              onClick={() => setColorHex(hex)}
+              aria-label={hex}
+              className={[
+                "aspect-square rounded-md border transition-transform",
+                colorHex === hex
+                  ? "scale-110 border-primary ring-2 ring-primary/30"
+                  : "border-outline-variant/60 hover:scale-105",
+              ].join(" ")}
+              style={{ backgroundColor: hex }}
+            />
+          ))}
+        </div>
+        <div className="mb-6 flex items-center gap-3 rounded-full border border-border bg-background px-3 py-2">
+          <span className="h-5 w-5 rounded-sm border border-outline-variant" style={{ backgroundColor: colorHex }} />
+          <input
+            type="color"
+            value={colorHex}
+            onChange={(e) => setColorHex(e.target.value)}
+            className="h-6 w-6 cursor-pointer border-0 bg-transparent p-0"
+            aria-label="Pick custom color"
+          />
+          <input
+            value={colorHex.toUpperCase()}
+            onChange={(e) => setColorHex(e.target.value)}
+            className="flex-1 bg-transparent font-mono text-xs uppercase tracking-wider outline-none"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={close}
+            className="label-caps flex-1 rounded-full border border-outline-variant py-3 transition-colors hover:bg-surface-container-low"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            className="label-caps flex-1 rounded-full bg-primary py-3 text-primary-foreground transition-transform active:scale-[0.98]"
+          >
+            {isEditing ? "Update garment" : "Save to closet"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
