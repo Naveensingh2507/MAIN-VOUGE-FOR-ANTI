@@ -63,7 +63,17 @@ export async function processAsset(payload: ProcessAssetPayload): Promise<Proces
 
 export function wakeUpServer() {
   const API_URL = import.meta.env.VITE_API_URL || "https://naveenhujime-ai-vogue.hf.space/extract";
-  const wakeupUrl = API_URL.replace("/extract", "/wakeup");
+  
+  // Robustly create the wakeup URL whether the user included /extract or not
+  let wakeupUrl = API_URL;
+  if (wakeupUrl.endsWith("/extract")) {
+    wakeupUrl = wakeupUrl.replace("/extract", "/wakeup");
+  } else if (wakeupUrl.endsWith("/")) {
+    wakeupUrl = wakeupUrl + "wakeup";
+  } else {
+    wakeupUrl = wakeupUrl + "/wakeup";
+  }
+  
   fetch(wakeupUrl).catch(() => {});
 }
 
