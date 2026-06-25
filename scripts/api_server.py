@@ -3,7 +3,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException # API Server for Garment DNA Extraction
+from fastapi import FastAPI, HTTPException, BackgroundTasks # API Server for Garment DNA Extraction
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -23,6 +23,26 @@ app.add_middleware(
 class ExtractRequest(BaseModel):
     image_base64: str
     apply_bg_removal: bool = True
+
+@app.get("/wakeup")
+async def wakeup_server(background_tasks: BackgroundTasks):
+    """
+    A lightweight endpoint to wake up the Hugging Face Space from sleep.
+    Triggers a background task to pre-load the heavy ML models into RAM
+    so that the first actual extraction is much faster.
+    """
+    def preload_models():
+        try:
+            print("Pre-warming rembg model...")
+            from rembg import new_session
+            new_session("u2net")
+            print("Models pre-warmed successfully!")
+        except Exception as e:
+            print(f"Failed to pre-warm models: {e}")
+
+    background_tasks.add_task(preload_models)
+    return {"status": "awake", "message": "Server is waking up and pre-loading AI models."}
+
 
 @app.post("/extract")
 async def extract_garment(request: ExtractRequest):
