@@ -50,6 +50,14 @@ export function AssetEditorModal() {
         setDnaFit(pending.garment_dna.user_overrides?.fit || pending.garment_dna.physical_traits?.fit || "");
         setDnaArchetype(pending.garment_dna.style_traits?.style_archetype || "Casual");
         setDnaFormality(pending.garment_dna.user_overrides?.formality_index ?? pending.garment_dna.style_traits?.formality_index ?? 5);
+      } else {
+        setExtractedDna(null);
+        setCleanImageUrl(null);
+        setDnaPattern("Solid");
+        setDnaMaterial("");
+        setDnaFit("");
+        setDnaArchetype("Casual");
+        setDnaFormality(5);
       }
     }
   }, [pending]);
