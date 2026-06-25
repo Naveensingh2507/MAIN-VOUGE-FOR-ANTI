@@ -7,7 +7,15 @@ import MatchabilityPage from "./pages/MatchabilityPage";
 import EventPage from "./pages/EventPage";
 import LoginPage from "./pages/LoginPage";
 
+import { useEffect } from "react";
+import { wakeUpServer } from "./utils/apiClient";
+
 export default function App() {
+  useEffect(() => {
+    // Fire a background ping to wake up the AI server and pre-load heavy models
+    wakeUpServer();
+  }, []);
+
   return (
     <BrowserRouter>
       <AppStateProvider>

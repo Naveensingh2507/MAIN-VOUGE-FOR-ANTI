@@ -61,6 +61,12 @@ export async function processAsset(payload: ProcessAssetPayload): Promise<Proces
   }
 }
 
+export function wakeUpServer() {
+  const API_URL = import.meta.env.VITE_API_URL || "https://naveenhujime-ai-vogue.hf.space/extract";
+  const wakeupUrl = API_URL.replace("/extract", "/wakeup");
+  fetch(wakeupUrl).catch(() => {});
+}
+
 /* ---------- Endpoint 1.5: Detect Skin Tone ---------- */
 export interface DetectSkinTonePayload { image_base64: string; }
 export interface DetectSkinToneResponse { skin_tone_hex: string; }
