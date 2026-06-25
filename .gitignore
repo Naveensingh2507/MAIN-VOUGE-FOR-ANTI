@@ -7,3 +7,10 @@ dist/
 repomix-output.xml
 .netlify/
 .vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+scripts/__pycache__/api_server.cpython-313.pyc
