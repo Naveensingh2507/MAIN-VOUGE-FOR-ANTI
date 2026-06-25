@@ -73,7 +73,7 @@ OUTPUT RULES
 5. quick_tips must be actionable, specific, and reference actual items or properties in the outfit.
 6. Never hallucinate garment properties not present in the provided garment_dna.
 7. When skin_tone_hex or build_type is provided, personalize the output — this is not optional.
-\`;
+`;
 
 function normalizeResponse(task: string, parsedData: any): any {
   if (!parsedData) return parsedData;
