@@ -5,6 +5,42 @@ import { fetchGarments, insertGarment, updateGarmentDB, deleteGarmentDB } from "
 // ---------- Types ----------
 export type GarmentCategory = "Topwear" | "Bottomwear" | "Footwear" | "Outerwear";
 
+/**
+ * Garment DNA — structured visual metadata extracted by the local Python pipeline
+ * (scripts/extract_garment_dna.py). This is the text context sent to Groq instead
+ * of raw image bytes. Fields marked null are user-fillable in AssetEditorModal.
+ */
+export interface GarmentDNA {
+  item_id: string;
+  category: GarmentCategory;
+  visual_traits: {
+    dominant_color_hex: string;
+    dominant_color_name: string;
+    secondary_color_hex: string | null;
+    secondary_color_name: string | null;
+    pattern: "Solid" | "Vertical Stripes" | "Horizontal Stripes" | "Complex Pattern";
+    pattern_confidence: number;
+  };
+  physical_traits: {
+    material: string | null;     // null = user must fill in
+    fit: string | null;          // null = user must fill in
+    sleeve_length: string | null;
+    garment_length: string | null;
+    neckline: string | null;
+    season: string;
+  };
+  style_traits: {
+    formality_index: number;     // 1–10
+    style_archetype: "Formal" | "Business Casual" | "Smart Casual" | "Streetwear" | "Casual";
+  };
+  user_overrides: {
+    material: string | null;
+    fit: string | null;
+    formality_index: number | null;
+  };
+  final_summary: string;         // Human-readable text sent to Groq
+}
+
 export interface Garment {
   id: number;
   name: string;
@@ -12,6 +48,7 @@ export interface Garment {
   colorHex: string;
   tags: string[];
   imageUrl: string;
+  garment_dna?: GarmentDNA;      // Optional — populated after DNA pipeline runs
 }
 
 export interface UserProfile {

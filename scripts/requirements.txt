@@ -1,0 +1,14 @@
+rembg[cpu]
+Pillow
+scikit-learn
+scikit-image
+numpy
+webcolors
+transformers
+torch
+open-clip-torch
+scipy
+fastapi
+uvicorn
+python-multipart
+pydantic

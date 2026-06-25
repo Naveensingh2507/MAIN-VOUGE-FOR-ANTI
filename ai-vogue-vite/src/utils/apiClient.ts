@@ -1,10 +1,14 @@
 // API client — calls our own /.netlify/functions/stylist endpoint, which
-// talks to Gemini server-side. The Gemini key never reaches the browser.
+// talks to Groq server-side. The GROQ_API_KEY never reaches the browser.
 //
 // Exported names and types are unchanged from the original stub version, so
 // AssetEditorModal.tsx, ProfilePage.tsx, MatchabilityPage.tsx, and EventPage.tsx
 // don't need to change their imports — only analyzeSynergy gained one extra
 // argument (inventory), matching the pattern suggestOutfit already used.
+//
+// Garment DNA: when a garment has a garment_dna field (populated by the local
+// Python pipeline), it is included in API payloads so stylist.ts can give
+// Groq rich text context about each garment instead of working blind.
 
 import type { Garment, UserProfile } from "@/state/AppState";
 
@@ -33,10 +37,27 @@ export interface ProcessAssetResponse {
   detected_category: "Topwear" | "Bottomwear" | "Footwear" | "Outerwear";
   detected_color_hex: string;
   confidence: number;
+  garment_dna?: any;
+  clean_image_base64?: string | null;
 }
 
 export async function processAsset(payload: ProcessAssetPayload): Promise<ProcessAssetResponse> {
-  return callStylist({ task: "detect_garment", ...payload });
+  try {
+    // Try the local Python bridge first (rembg + CLIP + precise color extraction)
+    const res = await fetch("http://localhost:8000/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      throw new Error(`Local python API error: ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    // Fallback to the Groq guessing approach if the Python server isn't running
+    console.warn("Local Python Garment DNA server (port 8000) not reachable. Falling back to Groq inference.", err);
+    return callStylist({ task: "detect_garment", ...payload });
+  }
 }
 
 /* ---------- Endpoint 1.5: Detect Skin Tone ---------- */
@@ -62,7 +83,14 @@ export async function suggestOutfit(
   payload: SuggestPayload,
   inventory: Garment[],
 ): Promise<SuggestResponse> {
-  const lite = (g: Garment) => ({ id: g.id, category: g.category, colorHex: g.colorHex, tags: g.tags });
+  // Include garment_dna when available so Groq can use rich visual context
+  const lite = (g: Garment) => ({
+    id: g.id,
+    category: g.category,
+    colorHex: g.colorHex,
+    tags: g.tags,
+    garment_dna: g.garment_dna ?? null,
+  });
   const locked = inventory.find((g) => g.id === payload.locked_item_id);
   const rest = inventory.filter((g) => g.id !== payload.locked_item_id);
   return callStylist({
@@ -94,17 +122,23 @@ export async function analyzeSynergy(
   payload: AnalyzePayload,
   inventory: Garment[],
 ): Promise<AnalyzeResponse> {
+  // Include garment_dna when available so Groq can use rich visual context
   const lite = (g: Garment | undefined) =>
-    g ? { id: g.id, category: g.category, colorHex: g.colorHex, tags: g.tags } : null;
+    g ? {
+      id: g.id,
+      category: g.category,
+      colorHex: g.colorHex,
+      tags: g.tags,
+      garment_dna: g.garment_dna ?? null,
+    } : null;
 
-  // Added safety check: if id is null/undefined, return undefined safely
-  const find = (id: number | null | undefined) => 
+  // Safety check: if id is null/undefined, return undefined safely
+  const find = (id: number | null | undefined) =>
     (id == null ? undefined : inventory.find((g) => g.id === id));
 
-return callStylist({
+  return callStylist({
     task: "analyze_synergy",
     outfit: {
-      // We use ?. to safely check if outfit exists before reading the IDs
       top: lite(find(payload.outfit?.top_id ?? null)),
       bottom: lite(find(payload.outfit?.bottom_id ?? null)),
       footwear: lite(find(payload.outfit?.footwear_id ?? null)),

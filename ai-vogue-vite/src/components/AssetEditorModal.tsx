@@ -25,6 +25,8 @@ export function AssetEditorModal() {
   const [removeBg, setRemoveBg] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
+  const [extractedDna, setExtractedDna] = useState<any>(null);
+  const [cleanImageUrl, setCleanImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (pending) {
@@ -42,6 +44,8 @@ export function AssetEditorModal() {
       const result = await processAsset({ image_base64: pending.imageUrl, apply_bg_removal: removeBg });
       setCategory(result.detected_category || "Topwear");
       setColorHex(result.detected_color_hex || "#1a1a1a");
+      if (result.garment_dna) setExtractedDna(result.garment_dna);
+      if (result.clean_image_base64) setCleanImageUrl(result.clean_image_base64);
       setAnalyzed(true);
     } finally {
       setAnalyzing(false);
@@ -62,7 +66,8 @@ export function AssetEditorModal() {
         category,
         colorHex,
         tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
-        imageUrl: pending.imageUrl ?? "",
+        imageUrl: cleanImageUrl || pending.imageUrl || "",
+        garment_dna: extractedDna || pending.garment_dna,
       });
     } else {
       addGarment({
@@ -70,7 +75,8 @@ export function AssetEditorModal() {
         category,
         colorHex,
         tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
-        imageUrl: pending.imageUrl ?? "",
+        imageUrl: cleanImageUrl || pending.imageUrl || "",
+        garment_dna: extractedDna,
       });
     }
     close();
@@ -95,8 +101,8 @@ export function AssetEditorModal() {
         {pending?.imageUrl && (
           <div className="relative mb-5">
             <div
-              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center"
-              style={{ backgroundImage: `url(${pending.imageUrl})`, backgroundColor: removeBg ? "#f0ece4" : undefined }}
+              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center transition-all duration-300"
+              style={{ backgroundImage: `url(${cleanImageUrl || pending.imageUrl})`, backgroundColor: removeBg ? "#f0ece4" : undefined }}
             />
             {!isEditing && (
               <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-primary-container/95 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-on-primary-container">
