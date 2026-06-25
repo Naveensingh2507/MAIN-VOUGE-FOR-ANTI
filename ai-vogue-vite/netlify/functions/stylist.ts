@@ -190,16 +190,18 @@ export const handler: Handler = async (event) => {
       if (payload.garment_dna) {
         promptText += formatDNAContext("GARMENT", payload.garment_dna) + "\n\n";
         promptText += `Using the Garment DNA above, respond with the detect_garment JSON schema. `;
-        promptText += `Use dominant_color_hex for detected_color_hex. Confidence should be 0.95 since DNA is authoritative.`;
+        promptText += `Use dominant_color_hex for detected_color_hex. Confidence should be 0.95 since DNA is authoritative.\n`;
       } else {
         promptText += `No garment DNA available (image was uploaded without running the local pipeline).\n`;
         promptText += `Task payload: ${JSON.stringify(payload)}\n`;
-        promptText += `Make a best-effort guess using any available metadata. Set confidence to 0.5.`;
+        promptText += `Make a best-effort guess using any available metadata. Set confidence to 0.5.\n`;
       }
+      promptText += `Respond exactly with this JSON schema: {"status":"success"|"error","detected_category":"Topwear"|"Bottomwear"|"Footwear"|"Outerwear","detected_color_hex":"#HEX","confidence":0.0}`;
 
     } else if (task === "detect_skin_tone") {
       // detect_skin_tone: still image-based — pass through as-is
-      promptText += `Task payload: ${JSON.stringify(payload)}`;
+      promptText += `Task payload: ${JSON.stringify(payload)}\n`;
+      promptText += `Respond exactly with this JSON schema: {"status":"success"|"error","skin_tone_hex":"#HEX","confidence":0.0}`;
 
     } else if (task === "suggest_outfit") {
       // suggest_outfit: format the locked item and full inventory with DNA context
@@ -225,7 +227,7 @@ export const handler: Handler = async (event) => {
 
       promptText += `\nSelect the best bottom and footwear from the inventory to pair with the locked item. `;
       promptText += `Consider color harmony, formality match, and style archetype compatibility. `;
-      promptText += `Respond with the suggest_outfit JSON schema.`;
+      promptText += `Respond exactly with this JSON schema: {"status":"success"|"failure","suggested_bottom_id":null,"suggested_footwear_id":null,"confidence_score":0,"error":null}`;
 
     } else if (task === "analyze_synergy") {
       // analyze_synergy: format all three outfit pieces with DNA context
