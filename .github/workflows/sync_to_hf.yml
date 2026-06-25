@@ -1,0 +1,31 @@
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "bot@huggingface.co"
+          git config --global user.name "Hugging Face Sync Bot"
+          
+          # Add the Hugging Face remote using the secret token for authentication
+          git remote add hf https://naveenhujime:$HF_TOKEN@huggingface.co/spaces/naveenhujime/AI-VOGUE
+          
+          # Force push only the 'scripts' folder to the 'main' branch of the HF Space
+          git subtree push --prefix scripts hf main

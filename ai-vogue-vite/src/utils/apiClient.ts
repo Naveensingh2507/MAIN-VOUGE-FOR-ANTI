@@ -43,8 +43,9 @@ export interface ProcessAssetResponse {
 
 export async function processAsset(payload: ProcessAssetPayload): Promise<ProcessAssetResponse> {
   try {
-    // Try the local Python bridge first (rembg + CLIP + precise color extraction)
-    const res = await fetch("http://localhost:8000/extract", {
+    // Use the live Hugging Face Space API by default, unless overridden in .env
+    const API_URL = import.meta.env.VITE_API_URL || "https://naveenhujime-ai-vogue.hf.space/extract";
+    const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
