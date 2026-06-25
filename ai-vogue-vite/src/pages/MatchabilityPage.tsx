@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Sparkles, RefreshCw, ChevronRight, X, Footprints, Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAppState, type Garment, type GarmentCategory } from "@/state/AppState";
