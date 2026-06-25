@@ -1,3 +1,12 @@
+---
+title: AI VOGUE
+emoji: 👗
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # 🧬 AI Vogue — Garment DNA Extraction Pipeline
 
 A local, offline Python pipeline that extracts structured visual metadata ("Garment DNA") from garment photos using free computer vision libraries. Zero API calls — runs entirely on your machine.
