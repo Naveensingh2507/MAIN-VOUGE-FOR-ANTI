@@ -9,42 +9,16 @@ export default function MatchabilityPage() {
   const { matchmakerSession, setMatchmakerSession, wardrobeInventory, userProfile, requireAuth } = useAppState();
   const [busy, setBusy] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
-  const location = useLocation();
-  const [forkPrompt, setForkPrompt] = useState<GarmentCategory | null>(location.state?.fork ?? null);
+  
+  // State for the Garment Picker modal
+  const [pickerCategory, setPickerCategory] = useState<GarmentCategory | null>(null);
 
-  const cycleSlot = (category: GarmentCategory, current: Garment | null) => {
-    const options = wardrobeInventory.filter((g) => g.category === category);
-    if (options.length === 0) return;
-    const idx = current ? options.findIndex((o) => o.id === current.id) : -1;
-    const next = options[(idx + 1) % options.length];
-    if (category === "Topwear") setMatchmakerSession({ selectedTop: next });
-    if (category === "Bottomwear") setMatchmakerSession({ selectedBottom: next });
-    if (category === "Footwear") setMatchmakerSession({ selectedFootwear: next });
-  };
-
-  const setSlot = (cat: GarmentCategory, g: Garment) => {
-    if (!requireAuth("Sign in to start matching pieces from your closet.", "/matchability")) return;
-    if (cat === "Topwear") {
-      setMatchmakerSession({ selectedTop: g });
-      if (!matchmakerSession.selectedBottom && forkPrompt !== "Bottomwear") setForkPrompt("Bottomwear");
-    }
-    if (cat === "Bottomwear") {
-      setMatchmakerSession({ selectedBottom: g });
-      if (!matchmakerSession.selectedTop && forkPrompt !== "Topwear") setForkPrompt("Topwear");
-    }
-    if (cat === "Footwear") setMatchmakerSession({ selectedFootwear: g });
-  };
-
-  const handleForkChoice = async (choice: "ai" | "manual") => {
-    const target = forkPrompt;
-    setForkPrompt(null);
-    if (!target) return;
-
-    if (choice === "ai") {
-      await autoSuggest();
-    } else {
-      cycleSlot(target, target === "Topwear" ? matchmakerSession.selectedTop : matchmakerSession.selectedBottom);
-    }
+  const handlePick = (g: Garment) => {
+    if (!pickerCategory) return;
+    if (pickerCategory === "Topwear") setMatchmakerSession({ selectedTop: g });
+    if (pickerCategory === "Bottomwear") setMatchmakerSession({ selectedBottom: g });
+    if (pickerCategory === "Footwear") setMatchmakerSession({ selectedFootwear: g });
+    setPickerCategory(null);
   };
 
   const autoSuggest = async () => {
@@ -125,8 +99,20 @@ export default function MatchabilityPage() {
 
       {/* Side-by-side slots */}
       <div className="grid grid-cols-2 gap-3">
-        <Slot label="Top" item={matchmakerSession.selectedTop} category="Topwear" onPick={setSlot} inventory={wardrobeInventory} />
-        <Slot label="Bottom" item={matchmakerSession.selectedBottom} category="Bottomwear" onPick={setSlot} inventory={wardrobeInventory} />
+        <Slot 
+          label="Top" 
+          item={matchmakerSession.selectedTop} 
+          onOpenPicker={() => setPickerCategory("Topwear")} 
+          onAutoFill={autoSuggest}
+          showAutoFill={!!matchmakerSession.selectedBottom} // Can AI choose top? Yes, if bottom is selected
+        />
+        <Slot 
+          label="Bottom" 
+          item={matchmakerSession.selectedBottom} 
+          onOpenPicker={() => setPickerCategory("Bottomwear")} 
+          onAutoFill={autoSuggest}
+          showAutoFill={!!matchmakerSession.selectedTop} // Can AI choose bottom? Yes, if top is selected
+        />
       </div>
 
       {/* Optional footwear */}
@@ -142,7 +128,14 @@ export default function MatchabilityPage() {
                 Remove
               </button>
             </div>
-            <Slot label="Footwear" item={matchmakerSession.selectedFootwear} category="Footwear" onPick={setSlot} inventory={wardrobeInventory} wide />
+            <Slot 
+              label="Footwear" 
+              item={matchmakerSession.selectedFootwear} 
+              onOpenPicker={() => setPickerCategory("Footwear")} 
+              onAutoFill={autoSuggest}
+              showAutoFill={!!matchmakerSession.selectedTop || !!matchmakerSession.selectedBottom} 
+              wide 
+            />
           </div>
         ) : (
           <button
@@ -157,14 +150,6 @@ export default function MatchabilityPage() {
       </div>
 
       <div className="mt-6 flex flex-col gap-3">
-        <button
-          onClick={autoSuggest}
-          disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full border border-primary/30 px-6 py-3 text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
-        >
-          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} strokeWidth={1.8} />
-          <span className="label-caps">Auto-fill alternatives</span>
-        </button>
         <button
           onClick={analyze}
           disabled={busy}
@@ -207,33 +192,45 @@ export default function MatchabilityPage() {
         </>
       )}
 
-      {/* AI vs Manual Fork Modal */}
-      {forkPrompt && (
+      {/* Garment Picker Modal */}
+      {pickerCategory && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in">
-          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setForkPrompt(null)} />
-          <div className="relative w-full max-w-md rounded-t-3xl bg-card p-6 shadow-ambient animate-slide-up sm:rounded-3xl">
-            <button onClick={() => setForkPrompt(null)} aria-label="Close" className="absolute right-6 top-6 text-on-surface-variant hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
-            <p className="label-caps text-primary">Next step</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">Complete the look</h2>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              Your {forkPrompt === "Topwear" ? "Bottomwear" : "Topwear"} is locked in. How do you want to find a matching {forkPrompt === "Topwear" ? "top" : "bottom"}?
-            </p>
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                onClick={() => handleForkChoice("ai")}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
-              >
-                <Sparkles className="h-4 w-4" strokeWidth={1.8} />
-                <span className="label-caps">Let AI do the work</span>
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setPickerCategory(null)} />
+          <div className="relative flex h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-card p-6 shadow-ambient animate-slide-up sm:h-[600px] sm:rounded-3xl">
+            <div className="mb-4 flex items-center justify-between shrink-0">
+              <div>
+                <p className="label-caps text-primary">Wardrobe</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight">Select {pickerCategory}</h2>
+              </div>
+              <button onClick={() => setPickerCategory(null)} aria-label="Close" className="text-on-surface-variant hover:text-foreground">
+                <X className="h-5 w-5" />
               </button>
-              <button
-                onClick={() => handleForkChoice("manual")}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-outline-variant px-6 py-4 text-foreground transition-colors hover:bg-surface-container-low"
-              >
-                <span className="label-caps">Choose from your wardrobe yourself</span>
-              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pb-6">
+              <div className="grid grid-cols-2 gap-3">
+                {wardrobeInventory.filter((g) => g.category === pickerCategory).map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => handlePick(g)}
+                    className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-container transition-colors hover:border-primary/50"
+                  >
+                    <div
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                      style={{ backgroundImage: `url(${g.imageUrl})` }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8 text-left">
+                      <p className="truncate text-xs font-bold text-white">{g.name}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {wardrobeInventory.filter((g) => g.category === pickerCategory).length === 0 && (
+                <div className="mt-10 text-center text-sm text-on-surface-variant">
+                  <p>You don't have any {pickerCategory} yet.</p>
+                  <Link to="/studio" className="mt-2 inline-block text-primary underline">Go to Studio to add some</Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -243,29 +240,24 @@ export default function MatchabilityPage() {
 }
 
 function Slot({
-  label, item, category, inventory, onPick, wide = false,
+  label, item, onOpenPicker, onAutoFill, showAutoFill, wide = false,
 }: {
   label: string;
   item: Garment | null;
-  category: GarmentCategory;
-  inventory: Garment[];
-  onPick: (cat: GarmentCategory, g: Garment) => void;
+  onOpenPicker: () => void;
+  onAutoFill: () => void;
+  showAutoFill: boolean;
   wide?: boolean;
 }) {
-  const options = inventory.filter((g) => g.category === category);
-  const cycle = () => {
-    if (options.length === 0) return;
-    const idx = item ? options.findIndex((o) => o.id === item.id) : -1;
-    onPick(category, options[(idx + 1) % options.length]);
-  };
   return (
     <div className={wide ? "col-span-2" : ""}>
       {!wide && <p className="label-caps mb-2 text-on-surface-variant">{label}</p>}
-      <button
-        onClick={cycle}
+      <div
         className={[
-          "group block w-full overflow-hidden rounded-2xl border border-border bg-card text-left transition-colors hover:border-primary/40",
+          "group relative block w-full overflow-hidden rounded-2xl border bg-card text-left transition-all duration-300",
+          item ? "border-border hover:border-primary/40 cursor-pointer" : "border-dashed border-primary/30 bg-primary/5",
         ].join(" ")}
+        onClick={item ? onOpenPicker : undefined}
       >
         {item ? (
           <div className={`relative w-full ${wide ? "aspect-[21/9]" : "aspect-square"}`}>
@@ -276,13 +268,29 @@ function Slot({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
               <p className="truncate text-sm font-bold text-white">{item.name}</p>
             </div>
+            <div className="absolute right-2 top-2 rounded-full bg-black/40 p-1.5 opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
+              <RefreshCw className="h-3.5 w-3.5 text-white" />
+            </div>
           </div>
         ) : (
-          <div className={`flex items-center justify-center text-center text-xs text-on-surface-variant ${wide ? "aspect-[21/9]" : "aspect-square"} px-3`}>
-            Tap to choose {label.toLowerCase()}
+          <div className={`flex flex-col items-center justify-center gap-3 p-4 text-center ${wide ? "aspect-[21/9]" : "aspect-square"}`}>
+            <button
+              onClick={onOpenPicker}
+              className="w-full rounded-full border border-outline-variant bg-background py-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              Select {label}
+            </button>
+            {showAutoFill && (
+              <button
+                onClick={onAutoFill}
+                className="flex w-full items-center justify-center gap-1.5 rounded-full bg-primary py-3 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Let AI Choose
+              </button>
+            )}
           </div>
         )}
-      </button>
+      </div>
     </div>
   );
 }
