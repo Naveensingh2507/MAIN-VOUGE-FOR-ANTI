@@ -27,5 +27,8 @@ jobs:
           # Add the Hugging Face remote using the secret token for authentication
           git remote add hf https://naveenhujime:$HF_TOKEN@huggingface.co/spaces/naveenhujime/AI-VOGUE
           
-          # Force push only the 'scripts' folder to the 'main' branch of the HF Space
-          git subtree push --prefix scripts hf main
+          # Split the scripts folder into its own branch
+          git subtree split --prefix scripts -b hf-branch
+          
+          # Force push that branch to the Hugging Face Space (overriding the default README)
+          git push -f hf hf-branch:main
