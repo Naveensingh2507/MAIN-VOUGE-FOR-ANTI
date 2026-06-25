@@ -152,7 +152,7 @@ export default function MatchabilityPage() {
       <div className="mt-6 flex flex-col gap-3">
         <button
           onClick={analyze}
-          disabled={busy}
+          disabled={busy || !matchmakerSession.selectedTop || !matchmakerSession.selectedBottom}
           className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-primary-foreground shadow-sm transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           <Sparkles className="h-4 w-4" strokeWidth={1.8} />
