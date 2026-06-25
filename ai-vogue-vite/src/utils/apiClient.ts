@@ -128,8 +128,20 @@ export interface AnalyzePayload {
   event_context: string;
 }
 export interface AnalyzeResponse {
-  synergy_score: { total: number; harmony: number; vibe: number };
+  synergy_score: { 
+    total: number; 
+    color_harmony: number; 
+    formality_match: number; 
+    pattern_balance: number; 
+    context_fit: number; 
+    build_alignment: number;
+  };
+  score_verdict: string;
+  color_analysis: string;
+  formality_analysis: string;
   editorial_feedback: string;
+  quick_tips: string[];
+  styling_verdict: string;
   status?: string;
   error?: string;
   error_message?: string;

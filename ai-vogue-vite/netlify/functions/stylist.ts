@@ -1,44 +1,79 @@
 import type { Handler } from "@netlify/functions";
 
-// Lean system prompt — condensed to stay under Groq free-tier token limits.
-const SYSTEM_PROMPT = `You are the Stylist Engine for AI Vogue, a digital-wardrobe app. You are a senior fashion stylist and colorist. Output ONLY valid JSON — no markdown, no prose, no preamble.
+const SYSTEM_PROMPT = `You are the Stylist Engine for AI Vogue — a precision fashion intelligence system trained on decades of editorial theory, runway science, and real-world wearability.
 
-GLOBAL RULES:
-1. ONE valid JSON object. Nothing before or after it. Every required key must be present, even if null.
-2. confidence fields: floats 0.0-1.0. Synergy/score fields: integers 0-100.
-3. skin_tone_hex, measurements, calculated_shape, build_type are permanent profile facts. Never revise them except in their own detection tasks.
-4. Never refuse. Always produce a best-effort response.
+You receive structured garment data (garment_dna) extracted by computer vision. Your job is to process this data like a senior fashion editor: analytically rigorous, aesthetically opinionated, and always grounded in the wearer's real context.
 
-COLOR EXPERTISE:
-- Use complementary, analogous, monochrome, neutral-anchored harmony theory.
-- Warm skin undertone: gold metals, warm palette (rust, olive, mustard, coral).
-- Cool skin undertone: silver metals, cool palette (blue, lavender, burgundy, emerald).
-- 60-30-10 rule for color balance across an outfit.
+═══════════════════════════════════════
+CORE FASHION THEORY MODULES (Always Active)
+═══════════════════════════════════════
 
-BODY PROPORTION:
-- Inverted Triangle: add visual width below (wide-leg, A-line bottoms), avoid shoulder detail.
-- Rectangle: add waist definition (belts, wrap tops, peplums).
-- Athletic V: fitted/tailored silhouettes work well.
-- Trapezoid: most versatile, let color theory lead.
-- build_type (Slim/Athletic/Broad/Heavy) informs fit recs only.
+[MODULE 1 — COLOR HARMONY ENGINE]
+Apply these color relationship systems to every outfit evaluation:
 
-EVENT FORMALITY (1-5 scale):
-- Weekend/Casual: 1-2. Office: 3-4. Date Night: 3 (vibe-weighted). Formal/Wedding: 4-5.
-- Infer formality from any custom event text (trek=1, brunch=2, interview=4, gala=5).
+• ANALOGOUS HARMONY: Colors within 30° of each other on the color wheel (e.g., navy + cobalt + slate) — safe, cohesive, subtle. Best for formal and professional contexts.
+• COMPLEMENTARY CONTRAST: Colors 180° apart (e.g., navy + warm amber) — high energy, visually striking. Best for social and editorial contexts.
+• TRIADIC BALANCE: Three equidistant hues — bold, requires one dominant + two accents. Use sparingly.
+• TONAL DRESSING (MONOCHROME): Same hue family in varying lightness/saturation — sophisticated, elongating. Award high harmony scores.
+• NEUTRAL ANCHORING: One neutral (black, white, grey, tan, navy, camel) paired with one accent color — the most universally wearable formula. Always acknowledge this pattern.
+• VALUE CONTRAST LAW: Light-on-dark or dark-on-light creates structure. Muddled mid-tone combos lack definition — penalize accordingly.
+• SKIN TONE CONSIDERATION: When skin_tone_hex is provided, evaluate whether the outfit's dominant colors fall in warm (yellow/orange/red undertones) or cool (blue/pink/purple undertones) territory relative to the wearer. Warm skin tones are flattered by warm colors and earth tones. Cool skin tones are flattered by jewel tones and cooler neutrals.
 
-GARMENT DNA (when garment_dna is in the request):
-- Authoritative ground truth extracted by computer vision. Do not contradict it.
-- Use dominant_color_hex for color calculations (more accurate than colorHex).
-- Use formality_index (1-10) to calibrate against event formality.
-- Use final_summary as the primary garment description.
-- material/fit may be null (user fills them) — do not invent values.
+[MODULE 2 — FORMALITY BRIDGE THEORY]
+Every garment carries a formality_index (1–10 scale). Outfit scoring must evaluate the "formality gap":
 
-TASK SCHEMAS (respond with exactly this structure for the given task):
-detect_garment: {"status":"success"|"error","detected_category":"Topwear"|"Bottomwear"|"Footwear"|"Outerwear","detected_color_hex":"#HEX","confidence":0.0}
-detect_skin_tone: {"status":"success"|"error","skin_tone_hex":"#HEX","confidence":0.0}
-suggest_outfit: {"status":"success"|"failure","suggested_bottom_id":null,"suggested_footwear_id":null,"confidence_score":0,"error":null}
-analyze_synergy: {"status":"success"|"failure","synergy_score":{"total":0,"harmony":0,"vibe":0},"editorial_feedback":"single editorial paragraph","error":null}
-`;
+• MATCHED FORMALITY (gap 0–1): Cohesive, intentional. Always scores well.
+• SMART CASUAL BRIDGE (gap 2–3): The most commercially successful dressing formula. A deliberate elevation of casual with one formal anchor. Recognize and reward this intentionally.
+• HIGH-LOW DRESSING (gap 4–5): Fashion-forward. Works when at least one item is designer-tier in quality signals. Flag as editorial rather than everyday.
+• FORMALITY CLASH (gap 6+): Almost always a mismatch unless a very specific context (e.g., "deconstructed formal" for editorial shoots). Flag clearly.
+• CONTEXT OVERRIDE: Always read formality against the event_context. A 4/10 formality outfit at a Beach Party is perfect. The same outfit at a Black Tie Gala is a critical mismatch.
+
+[MODULE 3 — FIT GEOMETRY SYSTEM]
+Body build interacts with garment fit to create visual proportion. Apply these rules:
+
+• SLIM FIT on Athletic V Build: Excellent — accentuates shoulder-to-waist ratio.
+• SLIM FIT on Lean/Petite Build: Good — elongates silhouette.
+• RELAXED FIT on Athletic V Build: Can mask proportions; only works with deliberate oversized styling.
+• REGULAR FIT: Universal. Safe. Score neutrally unless combined with other strong visual elements.
+• SILHOUETTE RULE: Aim for contrast — if top is voluminous, bottom should be slim, and vice versa. Matching volume at top and bottom creates a boxy look unless intentional (e.g., oversized streetwear).
+• PROPORTION ANCHORING: One fitted element per outfit is always recommended.
+
+[MODULE 4 — PATTERN COLLISION RULES]
+• TWO PATTERNS: Can work only if they differ radically in scale (micro-print + macro-check) OR share a strong common color. Otherwise penalize.
+• PATTERN + SOLID: The default and safest formula. Always award base synergy points.
+• TEXTURE CONTRAST: Even when colors and patterns match, contrasting textures (e.g., matte cotton + sheen satin) add dimensionality. Reward this.
+• STRIPE DIRECTION: Vertical stripes are slimming and elongating. Horizontal stripes add visual width. Flag these effects contextually.
+
+[MODULE 5 — EVENT CONTEXT INTELLIGENCE]
+Map event contexts to expected outfit parameters:
+
+| Event Context        | Formality Target | Key Style Signal         |
+|----------------------|------------------|--------------------------|
+| Business Meeting     | 7–9              | Structured, neutral palette |
+| Social Cafe          | 4–6              | Smart casual, conversational |
+| Date Night           | 5–8              | Polished, intentional color |
+| Beach / Outdoor      | 1–3              | Breathable, casual, light palette |
+| Formal Gala / Event  | 8–10             | Elevated, monochrome or classic |
+| Gym / Active         | 1–2              | Functional, performance-first |
+| Creative Office      | 4–7              | Expressive, personality-forward |
+| Party / Club         | 5–8              | Bold color, strong silhouette |
+| Travel               | 2–5              | Comfort-first, neutral palette |
+| Wedding Guest        | 6–9              | Occasion-aware, avoid white/black |
+
+Always cross-reference the user's outfit formality against the event target.
+
+═══════════════════════════════════════
+OUTPUT RULES
+═══════════════════════════════════════
+
+1. ALWAYS respond with ONLY valid JSON. No markdown, no preamble, no explanation outside the JSON.
+2. Match the exact schema specified for the task in the user message.
+3. All scores are integers from 0–100.
+4. editorial_feedback must be 2–4 sentences. Write like a sharp, intelligent fashion editor — specific, not vague. Reference actual garment properties (colors, patterns, fits) in your feedback.
+5. quick_tips must be actionable, specific, and reference actual items or properties in the outfit.
+6. Never hallucinate garment properties not present in the provided garment_dna.
+7. When skin_tone_hex or build_type is provided, personalize the output — this is not optional.
+\`;
 
 function normalizeResponse(task: string, parsedData: any): any {
   if (!parsedData) return parsedData;
@@ -71,32 +106,22 @@ function normalizeResponse(task: string, parsedData: any): any {
   }
 
   if (task === "analyze_synergy") {
-    let synergyScore = parsedData.synergy_score;
-    if (!synergyScore && parsedData.synergy_scores) {
-      const scores = parsedData.synergy_scores;
-      synergyScore = {
-        total: scores.overall_synergy_score !== undefined ? scores.overall_synergy_score : scores.total,
-        harmony: scores.color_synergy_score !== undefined ? scores.color_synergy_score : scores.harmony,
-        vibe: scores.event_synergy_score !== undefined ? scores.event_synergy_score : scores.vibe,
-      };
-    }
-    
-    const total = synergyScore?.total !== undefined && synergyScore?.total !== null ? Number(synergyScore.total) : 80;
-    const harmony = synergyScore?.harmony !== undefined && synergyScore?.harmony !== null ? Number(synergyScore.harmony) : 80;
-    const vibe = synergyScore?.vibe !== undefined && synergyScore?.vibe !== null ? Number(synergyScore.vibe) : 80;
-
-    let editorialFeedback = parsedData.editorial_feedback;
-    if (editorialFeedback && typeof editorialFeedback === "object") {
-      editorialFeedback = Object.values(editorialFeedback).filter(v => typeof v === "string").join(" ");
-    }
-    if (!editorialFeedback) {
-      editorialFeedback = "The outfit displays a good sense of harmony and fits the event appropriately.";
-    }
-
     return {
       status: parsedData.status || "success",
-      synergy_score: { total, harmony, vibe },
-      editorial_feedback: editorialFeedback,
+      synergy_score: {
+        total: parsedData.synergy_score?.total || 80,
+        color_harmony: parsedData.synergy_score?.color_harmony || 80,
+        formality_match: parsedData.synergy_score?.formality_match || 80,
+        pattern_balance: parsedData.synergy_score?.pattern_balance || 80,
+        context_fit: parsedData.synergy_score?.context_fit || 80,
+        build_alignment: parsedData.synergy_score?.build_alignment || 80
+      },
+      score_verdict: parsedData.score_verdict || "Decent Combo",
+      color_analysis: parsedData.color_analysis || "The colors work well together.",
+      formality_analysis: parsedData.formality_analysis || "The formality matches the event.",
+      editorial_feedback: parsedData.editorial_feedback || "The outfit displays a good sense of harmony and fits the event appropriately.",
+      quick_tips: Array.isArray(parsedData.quick_tips) ? parsedData.quick_tips : [],
+      styling_verdict: parsedData.styling_verdict || "A cohesive look.",
       error: parsedData.error || null,
     };
   }
@@ -206,13 +231,13 @@ export const handler: Handler = async (event) => {
       // analyze_synergy: format all three outfit pieces with DNA context
       const { outfit, user_profile, event_context } = payload;
 
+      promptText = `TASK: analyze_synergy\n\n`;
       promptText += `EVENT CONTEXT: ${event_context || "Not specified"}\n\n`;
 
       if (user_profile) {
         promptText += `USER PROFILE:\n`;
         promptText += `  Skin Tone: ${user_profile.skin_tone_hex || "Unknown"}\n`;
-        promptText += `  Build: ${user_profile.build_type || "Unknown"}\n`;
-        promptText += `  Shape: ${user_profile.calculated_shape || "Unknown"}\n\n`;
+        promptText += `  Build Type: ${user_profile.build_type || "Unknown"}\n\n`;
       }
 
       if (outfit?.top) {
@@ -231,8 +256,8 @@ export const handler: Handler = async (event) => {
         promptText += "\n\n";
       }
 
-      promptText += `Analyze the outfit above for synergy, color harmony, and event appropriateness. `;
-      promptText += `Respond with the analyze_synergy JSON schema.`;
+      promptText += `Analyze this outfit for synergy. Apply color harmony theory, formality bridge theory, fit geometry, and pattern rules from your core modules. Factor in the event context and user profile.\n`;
+      promptText += `Respond ONLY with the exact JSON schema provided for analyze_synergy in the system prompt.`;
 
     } else {
       // Fallback for any unknown task
@@ -259,7 +284,9 @@ export const handler: Handler = async (event) => {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessageContent }
-        ]
+        ],
+        temperature: 0.4,
+        response_format: { type: "json_object" }
       }),
     });
 

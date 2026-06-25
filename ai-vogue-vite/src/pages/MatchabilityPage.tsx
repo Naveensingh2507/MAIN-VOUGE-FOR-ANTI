@@ -162,33 +162,53 @@ export default function MatchabilityPage() {
 
       {analysis && (
         <>
-          <section className="mt-8 animate-fade-up rounded-2xl border border-border bg-card p-6 text-center">
+          <section className="mt-8 animate-fade-up rounded-2xl border border-border bg-card p-6 text-center shadow-ambient">
             <p className="label-caps text-on-surface-variant">Synergy Score</p>
             <div className="mt-3 inline-flex items-baseline gap-1">
               <span className="text-6xl font-extrabold leading-none text-primary">{analysis.synergy_score.total}</span>
               <span className="text-2xl font-bold text-primary">%</span>
             </div>
+            <p className="mt-1 text-lg font-bold text-foreground">{analysis.score_verdict}</p>
             <div className="mx-auto mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
               <div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${analysis.synergy_score.total}%` }} />
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 text-left">
-              <Metric label="Harmony" value={analysis.synergy_score.harmony} />
-              <Metric label="Vibe" value={analysis.synergy_score.vibe} />
+            
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 text-left">
+              <Metric label="Color Harmony" value={analysis.synergy_score.color_harmony} />
+              <Metric label="Formality" value={analysis.synergy_score.formality_match} />
+              <Metric label="Pattern Bal." value={analysis.synergy_score.pattern_balance} />
+              <Metric label="Context Fit" value={analysis.synergy_score.context_fit} />
             </div>
           </section>
 
-          <section className="mt-4 animate-fade-up rounded-2xl border border-border bg-card p-6">
-            <p className="label-caps mb-2 text-on-surface-variant">Evaluation Summary</p>
-            <p className="text-base font-semibold">Silhouette Harmony <span className="ml-1 text-xs font-medium text-primary">Optimal</span></p>
-            <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{analysis.editorial_feedback}</p>
+          <section className="mt-4 animate-fade-up rounded-2xl border border-border bg-card p-6 shadow-ambient">
+            <p className="label-caps mb-4 text-on-surface-variant">Editor's Take</p>
+            <p className="text-lg font-bold italic text-foreground">"{analysis.styling_verdict}"</p>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm font-bold text-foreground">Color & Formality</p>
+                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{analysis.color_analysis} {analysis.formality_analysis}</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Styling Details</p>
+                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{analysis.editorial_feedback}</p>
+              </div>
+            </div>
           </section>
 
-          <section className="mt-4 animate-fade-up rounded-2xl bg-primary-container/40 p-5">
-            <p className="label-caps mb-2 text-primary">Event Outcome — {matchmakerSession.eventContext}</p>
-            <p className="text-sm leading-relaxed text-on-primary-container">
-              This composition signals effortless authority in {matchmakerSession.eventContext.toLowerCase()} environments — textural contrast carries the look without overreach.
-            </p>
-          </section>
+          {analysis.quick_tips && analysis.quick_tips.length > 0 && (
+            <section className="mt-4 animate-fade-up rounded-2xl bg-primary-container/40 p-5 shadow-ambient">
+              <p className="label-caps mb-3 text-primary">Quick Tips</p>
+              <ul className="flex flex-col gap-2">
+                {analysis.quick_tips.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-on-primary-container">
+                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
 
