@@ -4,6 +4,8 @@ import { useAppState, type GarmentCategory } from "@/state/AppState";
 import { processAsset } from "@/utils/apiClient";
 
 const CATEGORIES: GarmentCategory[] = ["Topwear", "Bottomwear", "Footwear", "Outerwear"];
+const PATTERNS = ["Solid", "Vertical Stripes", "Horizontal Stripes", "Complex Pattern"];
+const ARCHETYPES = ["Formal", "Business Casual", "Smart Casual", "Streetwear", "Casual"];
 
 // Premium color spectrum — neutrals, earth tones, jewels, brights.
 const COLOR_GRID = [
@@ -28,12 +30,27 @@ export function AssetEditorModal() {
   const [extractedDna, setExtractedDna] = useState<any>(null);
   const [cleanImageUrl, setCleanImageUrl] = useState<string | null>(null);
 
+  // Editable DNA fields
+  const [dnaPattern, setDnaPattern] = useState<string>("Solid");
+  const [dnaMaterial, setDnaMaterial] = useState<string>("");
+  const [dnaFit, setDnaFit] = useState<string>("");
+  const [dnaArchetype, setDnaArchetype] = useState<string>("Casual");
+  const [dnaFormality, setDnaFormality] = useState<number>(5);
+
   useEffect(() => {
     if (pending) {
       setName(pending.name ?? "New Item");
       setCategory((pending.category as GarmentCategory) ?? "Topwear");
       setColorHex(pending.colorHex ?? "#1a1a1a");
       setAnalyzed(!!pending.category);
+      if (pending.garment_dna) {
+        setExtractedDna(pending.garment_dna);
+        setDnaPattern(pending.garment_dna.visual_traits?.pattern || "Solid");
+        setDnaMaterial(pending.garment_dna.user_overrides?.material || pending.garment_dna.physical_traits?.material || "");
+        setDnaFit(pending.garment_dna.user_overrides?.fit || pending.garment_dna.physical_traits?.fit || "");
+        setDnaArchetype(pending.garment_dna.style_traits?.style_archetype || "Casual");
+        setDnaFormality(pending.garment_dna.user_overrides?.formality_index ?? pending.garment_dna.style_traits?.formality_index ?? 5);
+      }
     }
   }, [pending]);
 
@@ -44,7 +61,14 @@ export function AssetEditorModal() {
       const result = await processAsset({ image_base64: pending.imageUrl, apply_bg_removal: removeBg });
       setCategory(result.detected_category || "Topwear");
       setColorHex(result.detected_color_hex || "#1a1a1a");
-      if (result.garment_dna) setExtractedDna(result.garment_dna);
+      if (result.garment_dna) {
+        setExtractedDna(result.garment_dna);
+        setDnaPattern(result.garment_dna.visual_traits?.pattern || "Solid");
+        setDnaMaterial(result.garment_dna.physical_traits?.material || "");
+        setDnaFit(result.garment_dna.physical_traits?.fit || "");
+        setDnaArchetype(result.garment_dna.style_traits?.style_archetype || "Casual");
+        setDnaFormality(result.garment_dna.style_traits?.formality_index ?? 5);
+      }
       if (result.clean_image_base64) setCleanImageUrl(result.clean_image_base64);
       setAnalyzed(true);
     } finally {
@@ -60,6 +84,19 @@ export function AssetEditorModal() {
       close();
       return;
     }
+
+    const finalDna = extractedDna ? {
+      ...extractedDna,
+      visual_traits: { ...extractedDna.visual_traits, pattern: dnaPattern },
+      style_traits: { ...extractedDna.style_traits, style_archetype: dnaArchetype },
+      user_overrides: {
+        ...(extractedDna.user_overrides || {}),
+        material: dnaMaterial || null,
+        fit: dnaFit || null,
+        formality_index: dnaFormality,
+      }
+    } : null;
+
     if (isEditing) {
       updateGarment(pending.id!, {
         name,
@@ -67,7 +104,7 @@ export function AssetEditorModal() {
         colorHex,
         tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
         imageUrl: cleanImageUrl || pending.imageUrl || "",
-        garment_dna: extractedDna || pending.garment_dna,
+        garment_dna: finalDna || pending.garment_dna,
       });
     } else {
       addGarment({
@@ -76,7 +113,7 @@ export function AssetEditorModal() {
         colorHex,
         tags: [category === "Topwear" ? "Top" : category === "Bottomwear" ? "Bottoms" : category],
         imageUrl: cleanImageUrl || pending.imageUrl || "",
-        garment_dna: extractedDna,
+        garment_dna: finalDna,
       });
     }
     close();
@@ -226,6 +263,77 @@ export function AssetEditorModal() {
             className="flex-1 bg-transparent font-mono text-xs uppercase tracking-wider outline-none"
           />
         </div>
+
+        {/* --- Garment DNA Editor --- */}
+        {extractedDna && (
+          <div className="mb-6 rounded-2xl bg-surface-container p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold tracking-tight text-primary">Garment DNA Profile</h3>
+            
+            <label className="label-caps mb-2 block text-on-surface-variant">Pattern</label>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {PATTERNS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setDnaPattern(p)}
+                  className={["px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors", dnaPattern === p ? "bg-primary text-primary-foreground border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container-high"].join(" ")}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <label className="label-caps mb-2 block text-on-surface-variant">Style Archetype</label>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {ARCHETYPES.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setDnaArchetype(a)}
+                  className={["px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors", dnaArchetype === a ? "bg-primary text-primary-foreground border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container-high"].join(" ")}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-4 flex gap-4">
+              <div className="flex-1">
+                <label className="label-caps mb-2 block text-on-surface-variant">Material (optional)</label>
+                <input
+                  value={dnaMaterial}
+                  onChange={(e) => setDnaMaterial(e.target.value)}
+                  placeholder="e.g. Cotton, Denim"
+                  className="w-full rounded-xl border border-outline-variant bg-background px-4 py-2 text-sm outline-none transition-colors focus:border-foreground"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="label-caps mb-2 block text-on-surface-variant">Fit (optional)</label>
+                <input
+                  value={dnaFit}
+                  onChange={(e) => setDnaFit(e.target.value)}
+                  placeholder="e.g. Slim, Oversized"
+                  className="w-full rounded-xl border border-outline-variant bg-background px-4 py-2 text-sm outline-none transition-colors focus:border-foreground"
+                />
+              </div>
+            </div>
+
+            <label className="label-caps mb-2 block text-on-surface-variant flex justify-between">
+              <span>Formality Index</span>
+              <span className="font-mono text-primary">{dnaFormality}/10</span>
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              value={dnaFormality}
+              onChange={(e) => setDnaFormality(parseInt(e.target.value, 10))}
+              className="w-full accent-primary"
+            />
+            <div className="mt-1 flex justify-between text-[10px] uppercase text-on-surface-variant">
+              <span>Ultra Casual</span>
+              <span>Black Tie</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button
