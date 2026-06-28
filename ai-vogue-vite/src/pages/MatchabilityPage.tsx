@@ -288,8 +288,9 @@ function Slot({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
               <p className="truncate text-sm font-bold text-white">{item.name}</p>
             </div>
-            <div className="absolute right-2 top-2 rounded-full bg-black/40 p-1.5 opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
-              <RefreshCw className="h-3.5 w-3.5 text-white" />
+            <div className="absolute right-2 top-2 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur-md transition-colors group-hover:bg-black/70 flex items-center gap-1.5 shadow-sm border border-white/10">
+              <RefreshCw className="h-3 w-3 text-white" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white">Change</span>
             </div>
           </div>
         ) : (
