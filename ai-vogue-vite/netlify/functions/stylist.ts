@@ -259,7 +259,28 @@ export const handler: Handler = async (event) => {
       }
 
       promptText += `Analyze this outfit for synergy. Apply color harmony theory, formality bridge theory, fit geometry, and pattern rules from your core modules. Factor in the event context and user profile.\n`;
-      promptText += `Respond ONLY with the exact JSON schema provided for analyze_synergy in the system prompt.`;
+      promptText += `Respond ONLY with this exact JSON schema:
+{
+  "status": "success",
+  "synergy_score": {
+    "total": <0-100 integer>,
+    "color_harmony": <0-100 integer>,
+    "formality_match": <0-100 integer>,
+    "pattern_balance": <0-100 integer>,
+    "context_fit": <0-100 integer>,
+    "build_alignment": <0-100 integer>
+  },
+  "score_verdict": "<Excellent Match | Strong Match | Decent Combo | Needs Work | Critical Mismatch>",
+  "color_analysis": "<1-2 sentences: name the exact color relationship at play (analogous, complementary, tonal, etc.) and whether it works>",
+  "formality_analysis": "<1 sentence: state the formality gap and its implication for the event context>",
+  "editorial_feedback": "<2-4 sentences: sharp, specific, editor-voice feedback referencing real garment details>",
+  "quick_tips": [
+    "<Specific actionable tip 1>",
+    "<Specific actionable tip 2>",
+    "<Specific actionable tip 3>"
+  ],
+  "styling_verdict": "<One punchy editorial line summarizing the outfit — like a magazine caption>"
+}`;
 
     } else {
       // Fallback for any unknown task
